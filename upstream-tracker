@@ -1,0 +1,88 @@
+#!/bin/bash
+# Script to track mainline progress of patches in TI vendor tree
+# Based on a script provided by Tomi Valkeinen <tomi.valkeinen@ti.com>
+#
+# License: GNU Public License, version 2.0
+
+# paths we're interested in. speeds up processing quite a bit to limit the commits.
+#paths="drivers/mmc/host"
+count=$(perl -MPOSIX -le 'print LONG_MAX')
+committers='\(nsekhar@ti.com\)\|\(mugunthanvnm@ti.com\)\|\(vigneshr@ti.com\)\|\(kishon@ti.com\)\|\(rogerq@ti.com\)|\(grygorii.strashko@ti.com\)|\(fcooper@ti.com\)|\(balbi@ti.com\)'
+base=$(git describe HEAD | cut -d "-" -f 1)
+
+function commitlist {
+	for c in $(git rev-list --max-count=$count --no-merges $1 ^$base --committer=$2 $paths)
+	do
+		git log -1 --pretty=format:"%an%x09%s%x09" $c
+		patchid=`git show --pretty=fuller $c | git patch-id --stable | cut -d " " -f 1`
+		printf "%s\t%s\n" $patchid $c
+	done
+}
+
+# collect patch ids for commits in ti-linux
+if [ -f ti-patch-id-list ]
+then
+	echo "using existing file ti-patch-id-list" 1>&2
+else
+	commitlist ti-linux/ti-linux-4.4.y $committers > ti-patch-id-list
+	echo "done creating ti-patch-id-list" 1>&2
+fi
+
+# collect patch ids for commits in mainline
+if [ -f upstream-patch-id-list ]
+then
+	echo "using existing file upstream-patch-id-list" 1>&2
+else
+	commitlist linux-next/master '@' > upstream-patch-id-list
+	echo "done creating upstream-patch-id-list" 1>&2
+fi
+
+# combine both lists into one
+printf "Author\tHeadline\tTI Commit\tPatch-id match\tHeadline match\tPatch description mention\tScore\n"
+while read l; do
+	score=0
+	author=`echo "$l" | awk -F'\t' '{print $1}'`
+	headline=`echo "$l" | awk -F'\t' '{print $2}'`
+	patchid=`echo "$l" | awk -F'\t' '{print $3}'`
+	commitid=`echo "$l" | awk -F'\t' '{print $4}'`
+
+	foundline=`grep -m 1 $patchid upstream-patch-id-list`
+
+	upcommitid=`echo "$foundline" | awk -F'\t' '{print $4}'`
+	if [ -z $upcommitid ]
+	then
+		upcommitid="NA"
+	else
+		score=`expr $score + 1`
+	fi
+
+	printf "%s\t%s\t%s\t%s\t" "$author" "$headline" $commitid $upcommitid
+
+	foundline=`grep -m 1 "$headline" upstream-patch-id-list`
+	found=$?
+
+	upcommitid=`echo "$foundline" | awk -F'\t' '{print $4}'`
+	if [ -z $upcommitid ]
+	then
+		upcommitid="NA"
+	else
+		score=`expr $score + 1`
+	fi
+
+	printf "%s\t" $upcommitid
+
+	upcommitid=`git show --pretty=fuller $commitid | grep -E "commit [[:alnum:]]{40} upstream" | cut -d " " -f 6`
+	if [ -z $upcommitid ]
+	then
+		upcommitid="NA"
+	else
+		score=`expr $score + 1`
+	fi
+
+	printf "%s\t%s\n" $upcommitid $score
+
+done < ti-patch-id-list
+
+# list of missing commits
+# grep ^1 combined-patch-id-list | cut -d " " -f 2 | xargs git show --decorate=off --pretty="%h,%ae,%s" -s > missing-patch-id-list
+
