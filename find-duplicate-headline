@@ -1,0 +1,13 @@
+#history of commits to search
+history=2000
+
+headline=`git log -1 --pretty="%H$%s" $1 | cut -d "$" -f 2`
+newlog=`git log -$history --pretty="%H$%s" | grep "$headline"`
+linecount=`echo $newlog | wc -l`
+if [ $linecount -gt 1 -o $linecount -eq 0 ]
+then
+	echo "Error: more than one commit with same subject"
+	echo $newlog
+	exit 1
+fi
+echo `echo $newlog | cut -d "$" -f 1`
