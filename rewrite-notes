@@ -1,0 +1,9 @@
+while read l; do
+	commitid=`echo $l | cut -d " " -f 4`
+	newcommit=`find-duplicate-headline $commitid`
+	echo $l | sed "s/$commitid/$newcommit/"
+
+	echo -n $newline
+
+done < $1 
+
