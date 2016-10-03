@@ -1,0 +1,5 @@
+commit_list=`git rev-list $2`
+for rev in $commit_list
+do
+	echo "jira_id: $1 commit_id: $rev"
+done

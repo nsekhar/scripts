@@ -9,6 +9,8 @@
 count=$(perl -MPOSIX -le 'print LONG_MAX')
 committers='\(nsekhar@ti.com\)\|\(mugunthanvnm@ti.com\)\|\(vigneshr@ti.com\)\|\(kishon@ti.com\)\|\(rogerq@ti.com\)|\(grygorii.strashko@ti.com\)|\(fcooper@ti.com\)|\(balbi@ti.com\)'
 base=$(git describe HEAD | cut -d "-" -f 1)
+patchidweight=50
+mentionweight=40
 
 function commitlist {
 	for c in $(git rev-list --max-count=$count --no-merges $1 ^$base --committer=$2 $paths)
@@ -37,6 +39,31 @@ else
 	echo "done creating upstream-patch-id-list" 1>&2
 fi
 
+function fuzzygrep {
+	weight=5
+	for i in `seq 0 $weight`
+	do
+		lines=`tre-agrep -k -E $i "$1" $2`
+		if [ -z "$lines" ]
+		then
+			count=0
+		else
+			count=`echo "$lines" | wc -l`
+		fi
+		if [ $count -gt 1 ]
+		then
+			echo "warning: multiple matches found at fuzz" $i "for headline" \""$1"\" "(using only first match)" 1>&2
+			echo "$lines" 1>&2
+		fi
+		if [ $count -gt 0 ]
+		then
+			weight=`expr $weight - $i`
+			echo "$lines" | head -1
+			return `expr $weight \* 2`
+		fi
+	done
+}
+
 # combine both lists into one
 printf "Author\tHeadline\tTI Commit\tPatch-id match\tHeadline match\tPatch description mention\tScore\n"
 while read l; do
@@ -53,20 +80,20 @@ while read l; do
 	then
 		upcommitid="NA"
 	else
-		score=`expr $score + 1`
+		score=`expr $score + $patchidweight`
 	fi
 
 	printf "%s\t%s\t%s\t%s\t" "$author" "$headline" $commitid $upcommitid
 
-	foundline=`grep -m 1 "$headline" upstream-patch-id-list`
-	found=$?
+	foundline="$(fuzzygrep "$headline" upstream-patch-id-list)"
+	grepweight=$?
 
 	upcommitid=`echo "$foundline" | awk -F'\t' '{print $4}'`
 	if [ -z $upcommitid ]
 	then
 		upcommitid="NA"
 	else
-		score=`expr $score + 1`
+		score=`expr $score + $grepweight`
 	fi
 
 	printf "%s\t" $upcommitid
@@ -76,7 +103,7 @@ while read l; do
 	then
 		upcommitid="NA"
 	else
-		score=`expr $score + 1`
+		score=`expr $score + $mentionweight`
 	fi
 
 	printf "%s\t%s\n" $upcommitid $score

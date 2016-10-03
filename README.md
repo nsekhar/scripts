@@ -4,6 +4,8 @@ Some scripts I use
 upstream-tracker: A script to track how many patches from TI tree
 		  made it into upstream.
 
+gen-notes: generate git notes in a specific format
+
 find-duplicate-headline: takes a commit and finds another commit
 			 (in a different tree) by the same headline.
 
