@@ -64,6 +64,10 @@ function fuzzygrep {
 	done
 }
 
+function shortcommit {
+	echo `git log -1 --format="%h" $1`
+}
+
 # combine both lists into one
 printf "Author\tHeadline\tTI Commit\tPatch-id match\tHeadline match\tPatch description mention\tScore\n"
 while read l; do
@@ -80,10 +84,11 @@ while read l; do
 	then
 		upcommitid="NA"
 	else
+		upcommitid=$(shortcommit $upcommitid)
 		score=`expr $score + $patchidweight`
 	fi
 
-	printf "%s\t%s\t%s\t%s\t" "$author" "$headline" $commitid $upcommitid
+	printf "%s\t%s\t%s\t%s\t" "$author" "$headline" $(shortcommit $commitid) $upcommitid
 
 	foundline="$(fuzzygrep "$headline" upstream-patch-id-list)"
 	grepweight=$?
@@ -93,6 +98,7 @@ while read l; do
 	then
 		upcommitid="NA"
 	else
+		upcommitid=$(shortcommit $upcommitid)
 		score=`expr $score + $grepweight`
 	fi
 
@@ -103,13 +109,11 @@ while read l; do
 	then
 		upcommitid="NA"
 	else
+		upcommitid=$(shortcommit $upcommitid)
 		score=`expr $score + $mentionweight`
 	fi
 
 	printf "%s\t%s\n" $upcommitid $score
 
 done < ti-patch-id-list
-
-# list of missing commits
-# grep ^1 combined-patch-id-list | cut -d " " -f 2 | xargs git show --decorate=off --pretty="%h,%ae,%s" -s > missing-patch-id-list
 
