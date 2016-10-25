@@ -11,7 +11,18 @@ committers='\(nsekhar@ti.com\)\|\(mugunthanvnm@ti.com\)\|\(vigneshr@ti.com\)\|\(
 base=$(git describe HEAD | cut -d "-" -f 1)
 patchidweight=50
 mentionweight=40
+tmpfile1=`mktemp`
+tmpfile2=`mktemp`
 
+function cleanup {
+	rm -rf $tmpfile1
+	rm -rf $tmpfile2
+}
+trap cleanup EXIT
+
+# Generate list of commits with author name, headline, patch-id and commit-id
+# Arg1: commit head to fetch commits from
+# Arg2: list of committers to filter by
 function commitlist {
 	for c in $(git rev-list --max-count=$count --no-merges $1 ^$base --committer=$2 $paths)
 	do
@@ -21,10 +32,29 @@ function commitlist {
 	done
 }
 
+# Update an existing file with new commits
+# Arg1 : name of file to update
+# Arg2 : commit head to fetch commits from
+# Arg3 : list of committers to filter by
+function updatefile {
+	base=`head -1 $1 | awk -F'\t' '{print $4}'`
+	commitlist $2 $3 >> $tmpfile1
+	if [ -n "`cat $tmpfile1`" ]
+	then
+		cp $1 $tmpfile2
+		cat $tmpfile1 $tmpfile2 > $1
+		rm -f $tmpfile2
+		echo "file $1 updated" 1>&2
+	fi
+	echo `wc -l $tmpfile1 | cut -d " " -f 1`
+}
+
 # collect patch ids for commits in ti-linux
 if [ -f ti-patch-id-list ]
 then
 	echo "using existing file ti-patch-id-list" 1>&2
+	numcommits=`updatefile ti-patch-id-list ti-linux/ti-linux-4.4.y $committers`
+	echo "updated ti-patch-id-list with $numcommits commits" 1>&2
 else
 	commitlist ti-linux/ti-linux-4.4.y $committers > ti-patch-id-list
 	echo "done creating ti-patch-id-list" 1>&2
@@ -34,11 +64,15 @@ fi
 if [ -f upstream-patch-id-list ]
 then
 	echo "using existing file upstream-patch-id-list" 1>&2
+	numcommits=`updatefile upstream-patch-id-list linux-next/master '@'`
+	echo "updated upstream-patch-id-list with $numcommits commits" 1>&2
 else
 	commitlist linux-next/master '@' > upstream-patch-id-list
 	echo "done creating upstream-patch-id-list" 1>&2
 fi
 
+# Find a headline with fuzz of 5 characters
+# Echoes the line found, warns if multiple lines found, and returns the weight of the match (0-10)
 function fuzzygrep {
 	weight=5
 	for i in `seq 0 $weight`
@@ -64,6 +98,7 @@ function fuzzygrep {
 	done
 }
 
+# returns the shortened form of a commit
 function shortcommit {
 	echo `git log -1 --format="%h" $1`
 }
