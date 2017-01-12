@@ -1,0 +1,10 @@
+TMP=`mktemp`
+git cherry-pick $1
+git show --pretty=%s --no-patch HEAD > $TMP
+echo "" >> $TMP
+fullcommit=`git log -1 --format="%H" $1`
+echo "commit $fullcommit upstream." >> $TMP
+echo "" >> $TMP
+git show --pretty=%b --no-patch HEAD >> $TMP
+git commit --amend --no-edit -F $TMP
+cat $TMP
