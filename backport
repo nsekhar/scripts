@@ -7,4 +7,4 @@ echo "commit $fullcommit upstream." >> $TMP
 echo "" >> $TMP
 git show --pretty=%b --no-patch HEAD >> $TMP
 git commit --amend --no-edit -F $TMP
-cat $TMP
+rm $TMP
