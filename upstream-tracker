@@ -37,11 +37,16 @@ function commitlist {
 # Arg2 : commit head to fetch commits from
 # Arg3 : list of committers to filter by
 function updatefile {
+	# Get base commit in existing file
 	base=`head -1 $1 | awk -F'\t' '{print $4}'`
-	commitlist $2 $3 >> $tmpfile1
+	# Get list of new commits from base
+	commitlist $2 $3 > $tmpfile1
+	# If there are new commits
 	if [ -n "`cat $tmpfile1`" ]
 	then
+		# save existing file
 		cp $1 $tmpfile2
+		# update file with new + old commits
 		cat $tmpfile1 $tmpfile2 > $1
 		rm -f $tmpfile2
 		echo "file $1 updated" 1>&2
