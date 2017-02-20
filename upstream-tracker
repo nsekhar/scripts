@@ -13,6 +13,7 @@ patchidweight=50
 mentionweight=40
 tmpfile1=`mktemp`
 tmpfile2=`mktemp`
+use_fuzz=0
 
 function cleanup {
 	rm -rf $tmpfile1
@@ -130,8 +131,14 @@ while read l; do
 
 	printf "%s\t%s\t%s\t%s\t" "$author" "$headline" $(shortcommit $commitid) $upcommitid
 
-	foundline="$(fuzzygrep "$headline" upstream-patch-id-list)"
-	grepweight=$?
+	if [ $use_fuzz -eq 1 ]
+	then
+		foundline="$(fuzzygrep "$headline" upstream-patch-id-list)"
+		grepweight=$?
+	else
+		foundline=`grep "$headline" upstream-patch-id-list | head -1`
+		grepweight=10
+	fi
 
 	upcommitid=`echo "$foundline" | awk -F'\t' '{print $4}'`
 	if [ -z $upcommitid ]
