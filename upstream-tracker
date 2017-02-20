@@ -7,6 +7,7 @@
 # paths we're interested in. speeds up processing quite a bit to limit the commits.
 #paths="drivers/mmc/host"
 count=$(perl -MPOSIX -le 'print LONG_MAX')
+committers='\(nsekhar@ti.com\)\|\(kishon@ti.com\)'
 devbranch=ti-linux/ti-linux-4.4.y
 upstreambranch=ti-linux/ti-linux-4.9.y
 base=$(git describe $devbranch | cut -d "-" -f 1)
