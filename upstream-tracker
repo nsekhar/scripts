@@ -7,8 +7,9 @@
 # paths we're interested in. speeds up processing quite a bit to limit the commits.
 #paths="drivers/mmc/host"
 count=$(perl -MPOSIX -le 'print LONG_MAX')
-committers='\(nsekhar@ti.com\)\|\(mugunthanvnm@ti.com\)\|\(vigneshr@ti.com\)\|\(kishon@ti.com\)\|\(rogerq@ti.com\)|\(grygorii.strashko@ti.com\)|\(fcooper@ti.com\)|\(balbi@ti.com\)'
-base=$(git describe HEAD | cut -d "-" -f 1)
+devbranch=ti-linux/ti-linux-4.4.y
+upstreambranch=ti-linux/ti-linux-4.9.y
+base=$(git describe $devbranch | cut -d "-" -f 1)
 patchidweight=50
 mentionweight=40
 tmpfile1=`mktemp`
@@ -55,14 +56,21 @@ function updatefile {
 	echo `wc -l $tmpfile1 | cut -d " " -f 1`
 }
 
+echo -n "development base: " 1>&2
+git describe $devbranch 1>&2
+echo -n "upstream base: " 1>&2
+git describe $upstreambranch 1>&2
+echo -n "patch base: " 1>&2
+git describe $base 1>&2
+
 # collect patch ids for commits in ti-linux
 if [ -f ti-patch-id-list ]
 then
 	echo "using existing file ti-patch-id-list" 1>&2
-	numcommits=`updatefile ti-patch-id-list ti-linux/ti-linux-4.4.y $committers`
+	numcommits=`updatefile ti-patch-id-list $devbranch $committers`
 	echo "updated ti-patch-id-list with $numcommits commits" 1>&2
 else
-	commitlist ti-linux/ti-linux-4.4.y $committers > ti-patch-id-list
+	commitlist $devbranch $committers > ti-patch-id-list
 	echo "done creating ti-patch-id-list" 1>&2
 fi
 
@@ -70,10 +78,10 @@ fi
 if [ -f upstream-patch-id-list ]
 then
 	echo "using existing file upstream-patch-id-list" 1>&2
-	numcommits=`updatefile upstream-patch-id-list linux-next/master '@'`
+	numcommits=`updatefile upstream-patch-id-list $upstreambranch '@'`
 	echo "updated upstream-patch-id-list with $numcommits commits" 1>&2
 else
-	commitlist linux-next/master '@' > upstream-patch-id-list
+	commitlist $upstreambranch '@' > upstream-patch-id-list
 	echo "done creating upstream-patch-id-list" 1>&2
 fi
 
