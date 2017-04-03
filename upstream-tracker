@@ -8,8 +8,8 @@
 #paths="drivers/mmc/host"
 count=$(perl -MPOSIX -le 'print LONG_MAX')
 committers='\(nsekhar@ti.com\)\|\(kishon@ti.com\)'
-devbranch=ti-linux/ti-linux-4.4.y
-upstreambranch=ti-linux/ti-linux-4.9.y
+devbranch=ti-linux/ti-linux-4.9.y
+upstreambranch=linux-next/master
 base=$(git describe $devbranch | cut -d "-" -f 1)
 patchidweight=50
 mentionweight=40
